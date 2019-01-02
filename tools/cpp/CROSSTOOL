@@ -1,0 +1,134 @@
+major_version: "local"
+minor_version: ""
+default_target_cpu: "same_as_host"
+
+default_toolchain {
+  cpu: "local"
+  toolchain_identifier: "local_linux_clang"
+}
+
+toolchain {
+  abi_version: "local"
+  abi_libc_version: "local"
+  builtin_sysroot: ""
+  compiler: "clang"
+  host_system_name: "local"
+  needsPic: true
+  supports_gold_linker: false
+  supports_incremental_linker: false
+  supports_fission: false
+  supports_interface_shared_objects: false
+  supports_normalizing_ar: false
+  supports_start_end_lib: false
+  supports_thin_archives: false
+  # supports_embedded_runtimes: true
+  target_libc: "local"
+  target_cpu: "local"
+  target_system_name: "local"
+  toolchain_identifier: "local_linux_clang"
+
+  cxx_flag: "-std=c++14"
+
+  linker_flag: "-lstdc++"
+  linker_flag: "-ldl"
+  linker_flag: "-B/usr/bin/"
+
+  # valgrind on xenial and bionic cannot read the debug information
+  # that lld produces.  Thus we stick with the GNU linker for now.
+  # linker_flag: "-fuse-ld=lld"
+
+  linker_flag: "-Wl,-z,relro,-z,now"
+  linker_flag: "-latomic"
+
+   # clang UBSAN config
+  compiler_flag: "-fsanitize-trap=undefined"
+  linker_flag: "-fsanitize-trap=undefined"
+
+  cxx_builtin_include_directory: "%package(@clang_x86_64//)%/lib/clang/7.0.0/include"
+  cxx_builtin_include_directory: "%package(@clang_x86_64//)%/include"
+
+  # TODO(bazel-team): In theory, the path here ought to exactly match the path
+  # used by gcc. That works because bazel currently doesn't track files at
+  # absolute locations and has no remote execution, yet. However, this will need
+  # to be fixed, maybe with auto-detection?
+  cxx_builtin_include_directory: "/usr/include/c++/6"
+  cxx_builtin_include_directory: "/usr/include/c++/5"
+  cxx_builtin_include_directory: "/usr/include/x86_64-linux-gnu/c++/6"
+  cxx_builtin_include_directory: "/usr/include/x86_64-linux-gnu/c++/5"
+  cxx_builtin_include_directory: "/usr/include/c++/6/backward"
+  cxx_builtin_include_directory: "/usr/include/c++/5/backward"
+  cxx_builtin_include_directory: "/usr/lib/gcc/x86_64-linux-gnu/6/include"
+  cxx_builtin_include_directory: "/usr/lib/gcc/x86_64-linux-gnu/6/include-fixed"
+  cxx_builtin_include_directory: "/usr/lib/gcc/x86_64-linux-gnu/5/include"
+  cxx_builtin_include_directory: "/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed"
+  cxx_builtin_include_directory: "/usr/include/x86_64-linux-gnu"
+  cxx_builtin_include_directory: "/usr/include"
+
+  linker_flag: "-no-canonical-prefixes"
+  unfiltered_cxx_flag: "-no-canonical-prefixes"
+  compiler_flag: "-no-canonical-prefixes"
+
+  # Make C++ compilation deterministic. Use linkstamping instead of these
+  # compiler symbols.
+  unfiltered_cxx_flag: "-Wno-builtin-macro-redefined"
+  unfiltered_cxx_flag: "-D__DATE__=\"redacted\""
+  unfiltered_cxx_flag: "-D__TIMESTAMP__=\"redacted\""
+  unfiltered_cxx_flag: "-D__TIME__=\"redacted\""
+
+  objcopy_embed_flag: "-I"
+  objcopy_embed_flag: "binary"
+
+  # CROSSTOOL requires that
+  #  (a) tool paths be relative to the CROSSTOOL directory
+  #  (b) no ".." or other escaping mechanisms are allowed
+  #
+  # Thus, we use wrappers for the clang binaries which can redirect to
+  # a path in the external/ tree.
+  tool_path { name: "gcc" path: "clang.sh" }
+  tool_path { name: "ld" path: "/usr/bin/ld" }
+  tool_path { name: "ar" path: "/usr/bin/ar" }
+  tool_path { name: "cpp" path: "/usr/bin/cpp" }
+  tool_path { name: "dwp" path: "/usr/bin/dwp" }
+  tool_path { name: "gcov" path: "/usr/bin/gcov" }
+  tool_path { name: "nm" path: "/usr/bin/nm" }
+  tool_path { name: "objcopy" path: "/usr/bin/objcopy" }
+  tool_path { name: "objdump" path: "/usr/bin/objdump" }
+  tool_path { name: "strip" path: "/usr/bin/strip" }
+
+  compiler_flag: "-fPIE"
+
+  compiler_flag: "-Wall"
+  compiler_flag: "-Wextra"
+
+  # We have allowed this for now.
+  compiler_flag: "-Wno-gnu-designator"
+
+  # This overrides the default runtime_library_search_directories because the default one uses
+  # $EXEC_ORIGIN which isn't supported on ubuntu 14.04 or 16.04
+  #
+  # From: https://github.com/dapirian/m/ (public-domain)
+  feature {
+      name: 'runtime_library_search_directories',
+      flag_set {
+          expand_if_all_available: 'runtime_library_search_directories'
+          action: 'c++-link-executable'
+          action: 'c++-link-dynamic-library'
+          action: 'c++-link-nodeps-dynamic-library'
+          flag_group {
+              iterate_over: 'runtime_library_search_directories'
+              flag_group {
+                  flag: '-Wl,-rpath,$ORIGIN/%{runtime_library_search_directories}'
+              }
+          }
+      }
+  }
+
+  # TODO(jpieper): I would like for all binaries created using this
+  # toolchain to use openmp.  That means that the clang "libomp.so"
+  # needs to be a dependency and thus their rpath needs to include a
+  # reference into the clang external package.
+  #
+  # How do I do that?
+  compiler_flag: "-fopenmp"
+  linker_flag: "-fopenmp"
+}

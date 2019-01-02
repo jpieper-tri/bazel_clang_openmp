@@ -1,0 +1,10 @@
+build --crosstool_top=//tools/cpp
+
+build --cpu=local
+test --cpu=local
+
+# Just so that I don't need to mess with defining a host configuration
+# too.
+build --distinct_host_configuration=false
+test --distinct_host_configuration=false
+run --distinct_host_configuration=false
